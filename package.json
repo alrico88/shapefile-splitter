@@ -1,0 +1,17 @@
+{
+	"name": "shapefile-splitter",
+	"version": "1.0.1",
+	"repository": {
+		"url": "https://github.com/alrico88/shapefile-splitter"
+	},
+	"license": "MIT",
+	"author": "Alberto Rico",
+	"preferGlobal": true,
+	"bin": "./splitshapes.js",
+	"dependencies": {
+		"ascii-progress": "^1.0.5",
+		"inquirer": "^6.0.0",
+		"ora": "^2.1.0",
+		"shapefile": "^0.6.6"
+	}
+}
