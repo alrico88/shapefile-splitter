@@ -28,11 +28,11 @@ async function askForInput() {
 /**
  * Gets GeoJSON file and properties
  *
- * @param {string} path
+ * @param {string} pathToRead
  * @returns {object}
  */
-async function getGeoJSON(path) {
-	let geoJSON = await readFile(path);
+async function getGeoJSON(pathToRead) {
+	let geoJSON = await readFile(pathToRead);
 
 	let props = [];
 
@@ -50,6 +50,12 @@ async function getGeoJSON(path) {
 	};
 }
 
+/**
+ * Asks for prop to split by
+ *
+ * @param {string[]} props
+ * @returns {Promise}
+ */
 async function askForPropertyToSplit(props) {
 	try {
 		return await inquirer.prompt([
@@ -121,6 +127,11 @@ async function askForFilter() {
 	}
 }
 
+/**
+ * Asks for filter type
+ *
+ * @returns {Promise}
+ */
 async function askForFilterType() {
 	try {
 		return await inquirer.prompt([
@@ -136,6 +147,12 @@ async function askForFilterType() {
 	}
 }
 
+/**
+ * Asks for a prop to filter by
+ *
+ * @param {string[]} propTypes
+ * @returns {Promise}
+ */
 async function askForPropToFilter(propTypes) {
 	try {
 		return await inquirer.prompt([
@@ -151,6 +168,12 @@ async function askForPropToFilter(propTypes) {
 	}
 }
 
+/**
+ * Asks for a list to choose from multiple prop values
+ *
+ * @param {string[]} propValues
+ * @returns {Promise}
+ */
 async function askForChoiceFilter(propValues) {
 	try {
 		return await inquirer.prompt([
@@ -166,6 +189,11 @@ async function askForChoiceFilter(propValues) {
 	}
 }
 
+/**
+ * Asks for input to filter by text
+ *
+ * @returns {Promise}
+ */
 async function askForTextFilter() {
 	try {
 		return await inquirer.prompt([
