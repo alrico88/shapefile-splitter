@@ -1,9 +1,17 @@
 {
 	"name": "shapefile-splitter",
-	"version": "1.0.1",
+	"version": "1.1.0",
 	"repository": {
 		"url": "https://github.com/alrico88/shapefile-splitter"
 	},
+	"keywords": [
+		"shapefile",
+		"split",
+		"geojson",
+		"cli",
+		"terminal",
+		"javascript"
+	],
 	"license": "MIT",
 	"author": "Alberto Rico",
 	"preferGlobal": true,
