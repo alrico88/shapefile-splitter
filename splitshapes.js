@@ -136,6 +136,21 @@ async function askForFilterType() {
 	}
 }
 
+async function askForPropToFilter(propTypes) {
+	try {
+		return await inquirer.prompt([
+			{
+				type: 'list',
+				choices: propTypes,
+				message: 'Which property values would you like to filter?',
+				name: 'choice',
+			},
+		]);
+	} catch (err) {
+		throw err;
+	}
+}
+
 async function askForChoiceFilter(propValues) {
 	try {
 		return await inquirer.prompt([
@@ -220,6 +235,8 @@ async function init() {
 		let filterBool = filterAnswer.filter === 'Yes';
 
 		if (filterBool) {
+			let propFilterAnswer = await askForPropToFilter(geoJSON.props);
+			let propToFilter = propFilterAnswer.choice;
 			let filterType = await askForFilterType();
 			let userChose;
 
@@ -236,20 +253,20 @@ async function init() {
 
 			if (userChose === 'list') {
 				let valuesSpinner = ora('Getting unique property values').start();
-				let values = geoJSON.map.features.map((feature) => feature.properties[propertyToSplitBy]);
+				let values = geoJSON.map.features.map((feature) => feature.properties[propToFilter]);
 				let uniqueValues = [...new Set(values)].sort(Intl.Collator().compare());
 				valuesSpinner.succeed('Read all possible values');
 				let list = await askForChoiceFilter(uniqueValues);
 				geoJSON.map.features = geoJSON.map.features.filter((feature) =>
-					list.selection.includes(feature.properties[propertyToSplitBy]));
+					list.selection.includes(feature.properties[propToFilter]));
 			}
 
 			if (userChose === 'text') {
 				let textFilter = await askForTextFilter();
 				geoJSON.map.features = geoJSON.map.features.filter((feature) => {
-					let value = feature.properties[propertyToSplitBy];
+					let value = feature.properties[propToFilter];
 					if (value !== null) {
-						let upperProp = feature.properties[propertyToSplitBy].toUpperCase();
+						let upperProp = feature.properties[propToFilter].toUpperCase();
 						let upperCheck = textFilter.text.toUpperCase();
 						return upperProp.includes(upperCheck);
 					}
