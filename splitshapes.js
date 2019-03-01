@@ -2,6 +2,8 @@
 
 const shapefile = require('shapefile');
 const ora = require('ora');
+const _ = require('lodash');
+const removeDiacritics = require('remove-diacritics');
 const inquirer = require('inquirer');
 const fs = require('fs');
 const homedir = require('os').homedir();
@@ -282,7 +284,11 @@ async function init() {
 			if (userChose === 'list') {
 				let valuesSpinner = ora('Getting unique property values').start();
 				let values = geoJSON.map.features.map((feature) => feature.properties[propToFilter]);
-				let uniqueValues = [...new Set(values)].sort(Intl.Collator().compare());
+				let uniqueValues = _.orderBy(
+					_.uniq(values),
+					(d) => removeDiacritics(d),
+					'asc'
+				);
 				valuesSpinner.succeed('Read all possible values');
 				let list = await askForChoiceFilter(uniqueValues);
 				geoJSON.map.features = geoJSON.map.features.filter((feature) =>
