@@ -311,14 +311,7 @@ async function init() {
 		let start = new Date();
 
 		// Get unique values for split
-		let uniqueValues = [];
-
-		for (let feature of geoJSON.map.features) {
-			let propToLookFor = feature.properties[propertyToSplitBy];
-			if (propToLookFor !== null && !uniqueValues.includes(propToLookFor)) {
-				uniqueValues.push(propToLookFor);
-			}
-		}
+		let uniqueValues = _.uniq(geoJSON.map.features.map((d) => d.properties[propertyToSplitBy]));
 
 		let len = uniqueValues.length;
 
