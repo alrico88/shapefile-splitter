@@ -2,26 +2,26 @@
 
 const shapefile = require('shapefile');
 const ora = require('ora');
-const _ = require('lodash');
+const {orderBy, uniq, flatten} = require('lodash');
 const removeDiacritics = require('remove-diacritics');
-const inquirer = require('inquirer');
 const fs = require('fs');
 const homedir = require('os').homedir();
 const path = require('path');
 const getCleanPath = require('./helpers/path');
+const Prompt = require('./helpers/prompt');
+const FileWriter = require('./helpers/file');
+
+const PromptCreator = new Prompt();
 
 /**
  * Asks for input file
  */
 async function askForInput() {
 	try {
-		return await inquirer.prompt([
-			{
-				type: 'input',
-				name: 'path',
-				message: `Path to shapefile to split`,
-			},
-		]);
+		return await PromptCreator.createInputPrompt(
+			'path',
+			`Path to shapefile to split`
+		);
 	} catch (err) {
 		throw err;
 	}
@@ -35,19 +35,8 @@ async function askForInput() {
  */
 async function getGeoJSON(pathToRead) {
 	let geoJSON = await readFile(pathToRead);
-
-	let props = [];
-
-	for (let feature of geoJSON.features) {
-		Object.keys(feature.properties).map((property) => {
-			if (!props.includes(property)) {
-				props.push(property);
-			}
-		});
-	}
-
 	return {
-		props: props,
+		props: uniq(flatten(geoJSON.features.map((feature) => Object.keys(feature.properties)))),
 		map: geoJSON,
 	};
 }
@@ -60,14 +49,11 @@ async function getGeoJSON(pathToRead) {
  */
 async function askForPropertyToSplit(props) {
 	try {
-		return await inquirer.prompt([
-			{
-				type: 'list',
-				name: 'property',
-				choices: props,
-				message: 'Property to split by',
-			},
-		]);
+		return await PromptCreator.createListPrompt(
+			'property',
+			'Property to split by',
+			props
+		);
 	} catch (err) {
 		throw err;
 	}
@@ -78,14 +64,11 @@ async function askForPropertyToSplit(props) {
  */
 async function askForFolder() {
 	try {
-		return await inquirer.prompt([
-			{
-				type: 'input',
-				name: 'folder',
-				message: 'Folder to put split files in',
-				default: '',
-			},
-		]);
+		return await PromptCreator.createInputPrompt(
+			'folder',
+			'Folder to put split files in',
+			''
+		);
 	} catch (err) {
 		throw err;
 	}
@@ -96,14 +79,11 @@ async function askForFolder() {
  */
 async function askForExtension() {
 	try {
-		return await inquirer.prompt([
-			{
-				type: 'list',
-				choices: ['json', 'geojson'],
-				message: 'Choose the file extension to use',
-				name: 'extension',
-			},
-		]);
+		return await PromptCreator.createListPrompt(
+			'extension',
+			'Choose the file extension to use',
+			['json', 'geojson']
+		);
 	} catch (err) {
 		throw err;
 	}
@@ -116,14 +96,11 @@ async function askForExtension() {
  */
 async function askForFilter() {
 	try {
-		return await inquirer.prompt([
-			{
-				type: 'list',
-				choices: ['Yes', 'No'],
-				message: 'Do you want to filter the properties to split?',
-				name: 'filter',
-			},
-		]);
+		return await PromptCreator.createListPrompt(
+			'filter',
+			'Do you want to filter the properties to split?',
+			['Yes', 'No']
+		);
 	} catch (err) {
 		throw err;
 	}
@@ -136,14 +113,11 @@ async function askForFilter() {
  */
 async function askForFilterType() {
 	try {
-		return await inquirer.prompt([
-			{
-				type: 'list',
-				choices: ['From a list', 'By text'],
-				message: 'Do you want to filter the properties to split?',
-				name: 'choice',
-			},
-		]);
+		return await PromptCreator.createListPrompt(
+			'choice',
+			'Do you want to filter the properties to split?',
+			['From a list', 'By text']
+		);
 	} catch (err) {
 		throw err;
 	}
@@ -157,14 +131,11 @@ async function askForFilterType() {
  */
 async function askForPropToFilter(propTypes) {
 	try {
-		return await inquirer.prompt([
-			{
-				type: 'list',
-				choices: propTypes,
-				message: 'Which property values would you like to filter?',
-				name: 'choice',
-			},
-		]);
+		return await PromptCreator.createListPrompt(
+			'choice',
+			'Which property values would you like to filter?',
+			propTypes
+		);
 	} catch (err) {
 		throw err;
 	}
@@ -178,14 +149,11 @@ async function askForPropToFilter(propTypes) {
  */
 async function askForChoiceFilter(propValues) {
 	try {
-		return await inquirer.prompt([
-			{
-				type: 'checkbox',
-				choices: propValues,
-				message: 'Choose which values to split',
-				name: 'selection',
-			},
-		]);
+		return await PromptCreator.createCheckboxPrompt(
+			'selection',
+			'Choose which values to split',
+			propValues
+		);
 	} catch (err) {
 		throw err;
 	}
@@ -198,13 +166,7 @@ async function askForChoiceFilter(propValues) {
  */
 async function askForTextFilter() {
 	try {
-		return await inquirer.prompt([
-			{
-				type: 'input',
-				message: 'Enter a text filter',
-				name: 'text',
-			},
-		]);
+		return await PromptCreator.createInputPrompt('text', 'Enter a text filter');
 	} catch (err) {
 		throw err;
 	}
@@ -213,12 +175,12 @@ async function askForTextFilter() {
 /**
  * Reads shapefile and returns GeoJSON
  *
- * @param {string} path
+ * @param {string} pathToFile
  * @returns {object} GeoJSON
  */
-async function readFile(path) {
+async function readFile(pathToFile) {
 	try {
-		return await shapefile.read(path, undefined, {encoding: 'UTF-8'});
+		return await shapefile.read(pathToFile, undefined, {encoding: 'UTF-8'});
 	} catch (err) {
 		console.error('Error reading shape', err);
 		throw err;
@@ -248,26 +210,26 @@ async function init() {
 	try {
 		console.clear();
 
-		let file = await askForInput();
-		let filePath = getCleanPath(file.path);
+		const file = await askForInput();
+		const filePath = getCleanPath(file.path);
 
-		let spinner = ora('Reading Shapefile').start();
-		let geoJSON = await getGeoJSON(filePath);
+		const spinner = ora('Reading Shapefile').start();
+		const geoJSON = await getGeoJSON(filePath);
 		spinner.succeed('Converted SHP to GeoJSON');
 
-		let propAnswer = await askForPropertyToSplit(geoJSON.props);
-		let propertyToSplitBy = propAnswer.property;
-		let folderAnswer = await askForFolder();
-		let extensionAnswer = await askForExtension();
-		let extensionToUse = extensionAnswer.extension;
+		const propAnswer = await askForPropertyToSplit(geoJSON.props);
+		const propertyToSplitBy = propAnswer.property;
+		const folderAnswer = await askForFolder();
+		const extensionAnswer = await askForExtension();
+		const extensionToUse = extensionAnswer.extension;
 
-		let filterAnswer = await askForFilter();
-		let filterBool = filterAnswer.filter === 'Yes';
+		const filterAnswer = await askForFilter();
+		const filterBool = filterAnswer.filter === 'Yes';
 
 		if (filterBool) {
-			let propFilterAnswer = await askForPropToFilter(geoJSON.props);
-			let propToFilter = propFilterAnswer.choice;
-			let filterType = await askForFilterType();
+			const propFilterAnswer = await askForPropToFilter(geoJSON.props);
+			const propToFilter = propFilterAnswer.choice;
+			const filterType = await askForFilterType();
 			let userChose;
 
 			switch (filterType.choice) {
@@ -282,15 +244,15 @@ async function init() {
 			}
 
 			if (userChose === 'list') {
-				let valuesSpinner = ora('Getting unique property values').start();
-				let values = geoJSON.map.features.map((feature) => feature.properties[propToFilter]);
-				let uniqueValues = _.orderBy(
-					_.uniq(values),
+				const valuesSpinner = ora('Getting unique property values').start();
+				const values = geoJSON.map.features.map((feature) => feature.properties[propToFilter]);
+				const uniqueValues = orderBy(
+					uniq(values),
 					(d) => removeDiacritics(d),
 					'asc'
 				);
 				valuesSpinner.succeed('Read all possible values');
-				let list = await askForChoiceFilter(uniqueValues);
+				const list = await askForChoiceFilter(uniqueValues);
 				geoJSON.map.features = geoJSON.map.features.filter((feature) =>
 					list.selection.includes(feature.properties[propToFilter]));
 			}
@@ -308,16 +270,16 @@ async function init() {
 			}
 		}
 
-		let start = new Date();
+		const start = new Date();
 
 		// Get unique values for split
-		let uniqueValues = _.uniq(geoJSON.map.features.map((d) => d.properties[propertyToSplitBy]));
+		const uniqueValues = uniq(geoJSON.map.features.map((d) => d.properties[propertyToSplitBy]));
 
-		let len = uniqueValues.length;
+		const len = uniqueValues.length;
 
-		let folderToPutFilesInto = folderAnswer.folder;
+		const folderToPutFilesInto = folderAnswer.folder;
 
-		let resultsPath = folderToPutFilesInto
+		const resultsPath = folderToPutFilesInto
 			? `${homedir}/Shapefiles/${folderToPutFilesInto}`
 			: `${homedir}/Shapefiles`;
 
@@ -326,32 +288,22 @@ async function init() {
 			fs.mkdirSync(resultsPath);
 		}
 
-		let progressSpinner = ora(`Splitting file [0/${len}]`).start();
+		const progressSpinner = ora(`Splitting file [0/${len}]`).start();
+
+		const fileWriter = new FileWriter(
+			resultsPath,
+			extensionToUse,
+			progressSpinner,
+			len
+		);
 
 		// Split feature to its own file
 		for (let i = 0; i < len; i++) {
 			let element = uniqueValues[i];
-			let resultingGeoJSON = {
+			fileWriter.writeFile(element, i, {
 				type: 'FeatureCollection',
 				features: geoJSON.map.features.filter((d) => d.properties[propertyToSplitBy] === element),
-			};
-
-			// Protection against "/" in file paths
-			let filename = element.toString().includes('/')
-				? element
-						.toString()
-						.split('/')
-						.join('-')
-				: element.toString();
-
-			progressSpinner.text = `Splitting file [${i}/${len}]: ${element}`;
-			progressSpinner.render();
-
-			let fileContent = JSON.stringify(resultingGeoJSON);
-			fs.writeFileSync(
-				`${resultsPath}/${filename}.${extensionToUse}`,
-				fileContent
-			);
+			});
 		}
 
 		progressSpinner.succeed(`Successfully split all files`);
@@ -371,8 +323,8 @@ async function init() {
  * @param {string} resultsPath
  */
 function endSummary(start, len, resultsPath) {
-	let end = new Date();
-	let time = end.getTime() - start.getTime();
+	const end = new Date();
+	const time = end.getTime() - start.getTime();
 
 	console.log('\n');
 	console.log(`Processed ${len} files in ${time / 1000} s.\nSaved to ${resultsPath}`);
