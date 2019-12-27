@@ -46,7 +46,7 @@ function askForPropertyToSplit(props) {
   return PromptCreator.createListPrompt(
     'property',
     'Property to split by',
-    props
+    props,
   );
 }
 
@@ -59,7 +59,7 @@ function askForFolder() {
   return PromptCreator.createInputPrompt(
     'folder',
     'Folder to put split files in',
-    ''
+    '',
   );
 }
 
@@ -72,7 +72,7 @@ function askForExtension() {
   return PromptCreator.createListPrompt(
     'extension',
     'Choose the file extension to use',
-    ['json', 'geojson']
+    ['json', 'geojson'],
   );
 }
 
@@ -85,7 +85,7 @@ function askForFilter() {
   return PromptCreator.createListPrompt(
     'filter',
     'Do you want to filter the properties to split?',
-    ['Yes', 'No']
+    ['Yes', 'No'],
   );
 }
 
@@ -98,7 +98,7 @@ function askForFilterType() {
   return PromptCreator.createListPrompt(
     'choice',
     'Do you want to filter the properties to split?',
-    ['From a list', 'By text']
+    ['From a list', 'By text'],
   );
 }
 
@@ -112,7 +112,7 @@ function askForPropToFilter(propTypes) {
   return PromptCreator.createListPrompt(
     'choice',
     'Which property values would you like to filter?',
-    propTypes
+    propTypes,
   );
 }
 
@@ -126,7 +126,7 @@ function askForChoiceFilter(propValues) {
   return PromptCreator.createCheckboxPrompt(
     'selection',
     'Choose which values to split',
-    propValues
+    propValues,
   );
 }
 
@@ -216,7 +216,7 @@ async function init() {
         const uniqueValues = orderBy(
           uniq(values),
           (d) => removeDiacritics(d),
-          'asc'
+          'asc',
         );
         valuesSpinner.succeed('Read all possible values');
         const list = await askForChoiceFilter(uniqueValues);
@@ -261,7 +261,7 @@ async function init() {
       resultsPath,
       extensionToUse,
       progressSpinner,
-      len
+      len,
     );
 
     // Split feature to its own file

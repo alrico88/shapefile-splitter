@@ -1,21 +1,16 @@
 const path = require('path');
+const replace = require('lodash/replace');
 
+/**
+ * Gets clean path from any string
+ *
+ * @param {string} uglyPath
+ * @returns {string}
+ */
 function getCleanPath(uglyPath) {
-  let newPath = uglyPath.trim();
-
-  if (newPath.includes('.shp')) {
-    newPath = newPath.split('.shp').join('');
-  }
-
-  if (newPath.includes('"')) {
-    newPath = newPath.split('"').join('');
-  }
-
-  if (newPath.includes('\'')) {
-    newPath = newPath.split('\'').join('');
-  }
-
-  return newPath;
+  const normPath = replace(uglyPath, /\\/g, '/');
+  const normQuotes = replace(normPath, /"/g, '');
+  return path.normalize(normQuotes.trim());
 }
 
 module.exports = getCleanPath;
