@@ -1,6 +1,6 @@
 {
 	"name": "shapefile-splitter",
-	"version": "1.1.6",
+	"version": "1.1.7",
 	"repository": {
 		"url": "https://github.com/alrico88/shapefile-splitter"
 	},
@@ -17,6 +17,7 @@
 	"preferGlobal": true,
 	"bin": "./splitshapes.js",
 	"dependencies": {
+		"featurecollection-filterer": "^1.0.1",
 		"inquirer": "^6.0.0",
 		"lodash": "^4.17.15",
 		"ora": "^2.1.0",

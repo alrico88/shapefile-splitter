@@ -192,7 +192,7 @@
     "object-curly-newline": "off",
     "object-curly-spacing": "error",
     "object-property-newline": "error",
-    "object-shorthand": ["error", "properties"],
+    "object-shorthand": "error",
     "one-var": "off",
     "one-var-declaration-per-line": "error",
     "operator-assignment": ["error", "always"],

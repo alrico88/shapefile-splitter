@@ -31,6 +31,7 @@ class FileWriter {
     /**
      * Gets clean name for file
      *
+     * @private
      * @param {string} [elementName]
      */
     this._getName = (elementName) => {
@@ -56,10 +57,9 @@ class FileWriter {
     this.progressSpinner.text = `Splitting file [${index}/${this.total}]: ${element}`;
     this.progressSpinner.render();
 
-    const fileContent = JSON.stringify(resultingGeoJSON);
     fs.writeFileSync(
       `${this.resultsPath}/${filename}.${this.extensionToUse}`,
-      fileContent,
+      JSON.stringify(resultingGeoJSON),
     );
   }
 }

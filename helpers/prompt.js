@@ -1,67 +1,72 @@
 const inquirer = require('inquirer');
 
 class Prompt {
-  constructor() {
-    this._createInquire = (opts) => inquirer.prompt([opts]);
+
+  /**
+   * Creates a prompt
+   *
+   * @private
+   * @static
+   * @param {{type: string, message: string, [choices]: string[]}} opts
+   * @returns {Promise<*>}
+   * @memberof Prompt
+   */
+  static _createInquire(opts) {
+    opts.name = 'result';
+    return inquirer.prompt([opts]);
   }
 
   /**
    * Creates input prompt
    *
-   * @param {string} name
    * @param {string} message
    * @param {string} [defaultValue=null]
    * @returns {object}
    * @memberof Prompt
    */
-  createInputPrompt(name, message, defaultValue = null) {
+  static createInputPrompt(message, defaultValue = null) {
     const opts = {
       type: 'input',
-      name,
       message,
     };
     if (defaultValue) {
       opts.default = defaultValue;
     }
-    return this._createInquire(opts);
+    return Prompt._createInquire(opts);
   }
 
   /**
    * Creates list prompt
    *
-   * @param {string} name
    * @param {string} message
    * @param {string[]} choices
    * @returns {object}
    * @memberof Prompt
    */
-  createListPrompt(name, message, choices) {
+  static createListPrompt(message, choices) {
     const opts = {
       type: 'list',
       choices,
       message,
-      name,
     };
-    return this._createInquire(opts);
+    return Prompt._createInquire(opts);
   }
 
   /**
    * Creates a checkbox prompt
    *
-   * @param {string} name
    * @param {string} message
    * @param {string[]} choices
    * @returns {Object}
    * @memberof Prompt
    */
-  createCheckboxPrompt(name, message, choices) {
+  static createCheckboxPrompt(message, choices) {
     const opts = {
       type: 'checkbox',
       choices,
       message,
-      name,
     };
-    return this._createInquire(opts);
+    return Prompt._createInquire(opts);
   }
 }
 
