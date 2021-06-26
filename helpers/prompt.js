@@ -13,6 +13,7 @@ class Prompt {
    */
   static _createInquire(opts) {
     opts.name = 'result';
+
     return inquirer.prompt([opts]);
   }
 
@@ -29,9 +30,11 @@ class Prompt {
       type: 'input',
       message,
     };
+
     if (defaultValue) {
       opts.default = defaultValue;
     }
+
     return Prompt._createInquire(opts);
   }
 
@@ -49,6 +52,8 @@ class Prompt {
       choices,
       message,
     };
+
+
     return Prompt._createInquire(opts);
   }
 
@@ -66,6 +71,8 @@ class Prompt {
       choices,
       message,
     };
+
+
     return Prompt._createInquire(opts);
   }
 }

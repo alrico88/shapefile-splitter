@@ -4,6 +4,7 @@
 	"repository": {
 		"url": "https://github.com/alrico88/shapefile-splitter"
 	},
+	"homepage": "https://github.com/alrico88/shapefile-splitter",
 	"keywords": [
 		"shapefile",
 		"split",
@@ -17,12 +18,15 @@
 	"preferGlobal": true,
 	"bin": "./splitshapes.js",
 	"dependencies": {
-		"featurecollection-filterer": "^1.0.1",
+		"filenamify": "^4.3.0",
 		"inquirer": "^6.0.0",
 		"lodash": "^4.17.21",
 		"ora": "^2.1.0",
-		"remove-diacritics": "^0.1.1",
+		"pretty-ms": "^7.0.1",
+		"promise-concurrency": "^1.1.1",
+		"rimraf": "^3.0.2",
 		"shapefile": "^0.6.6",
+		"tempy": "^1.0.1",
 		"uuid": "^3.3.3"
 	},
 	"devDependencies": {

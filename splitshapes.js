@@ -1,62 +1,20 @@
 #!/usr/bin/env node
 
-const shapefile = require('shapefile');
 const ora = require('ora');
-const orderBy = require('lodash/orderBy');
-const removeDiacritics = require('remove-diacritics');
-const fs = require('fs');
+const {existsSync, mkdirSync} = require('fs');
 const homedir = require('os').homedir();
 const path = require('path');
 const getCleanPath = require('./helpers/path');
-const {
-  askForChoiceFilter,
-  askForExtension,
-  askForFilter,
-  askForFilterType,
-  askForFolder,
-  askForInput,
-  askForPropToFilter,
-  askForPropertyToSplit,
-  askForTextFilter,
-} = require('./helpers/questions');
-const FileWriter = require('./helpers/file');
-const filterer = require('featurecollection-filterer');
-const Logger = require('./helpers/logger');
+const questions = require('./helpers/questions');
+const {Logger, msToText} = require('./helpers/logger');
+const {ShapefileReader} = require('./helpers/reader');
+const get = require('lodash/get');
+const {GeoJSONWriter} = require('./helpers/writer');
+const tempy = require('tempy');
+const promiseConcurrency = require('promise-concurrency');
+const {deleteFolder} = require('./helpers/deletion');
 
-/**
- * Gets GeoJSON file and properties
- *
- * @param {string} pathToRead
- * @returns {object}
- */
-async function getGeoJSON(pathToRead) {
-  const geoJSON = await readFile(pathToRead);
-  const props = new Set();
-  geoJSON.features.forEach((feature) => {
-    Object.keys(feature.properties).forEach((prop) => {
-      props.add(prop);
-    });
-  });
-  return {
-    props: [...props],
-    map: geoJSON,
-  };
-}
-
-/**
- * Reads shapefile and returns GeoJSON
- *
- * @param {string} pathToFile
- * @returns {Promise<GeoJSON.FeatureCollection>} GeoJSON
- */
-function readFile(pathToFile) {
-  try {
-    return shapefile.read(pathToFile, undefined, {encoding: 'UTF-8'});
-  } catch (err) {
-    Logger.error('Error reading shape', err);
-    throw err;
-  }
-}
+let tempFolder;
 
 /**
  * Creates base folder if it doesn't exist
@@ -64,8 +22,9 @@ function readFile(pathToFile) {
 function createBaseFolder() {
   try {
     const pathToCheck = path.join(homedir, 'Shapefiles');
-    if (!fs.existsSync(pathToCheck)) {
-      fs.mkdirSync(pathToCheck);
+
+    if (!existsSync(pathToCheck)) {
+      mkdirSync(pathToCheck);
     }
   } catch (err) {
     Logger.error('Error creating base folder');
@@ -74,99 +33,139 @@ function createBaseFolder() {
 }
 
 /**
- * Starts process
+ * Gets the function to filter from a list
  *
+ * @param {ShapefileReader} shapeReader
+ * @param {string} propToFilter
+ * @return {Promise<function(*): boolean>}
+ */
+async function getListFilterFunc(shapeReader, propToFilter) {
+  const valuesSpinner = ora('Getting unique property values').start();
+  const uniqueValues = await shapeReader.readPropUniqueValues(propToFilter);
+
+  valuesSpinner.succeed('Read all possible values');
+  const list = await questions.askForChoiceFilter(uniqueValues);
+
+  return function(feature) {
+    return list.includes(feature.properties[propToFilter]);
+  };
+}
+
+/**
+ * Gets the function to filter by text
+ *
+ * @param {ShapefileReader} shapeReader
+ * @param {string} propToFilter
+ * @return {Promise<(function(*): (*|boolean))|*>}
+ */
+async function getTextFilterFunc(shapeReader, propToFilter) {
+  const textFilter = await questions.askForTextFilter();
+
+  const textArray = textFilter.trim().split(',').map((d) => d.trim().toUpperCase());
+
+  return function (feature) {
+    const propValue = get(feature.properties, propToFilter);
+
+    if (propValue !== null) {
+      const upperProp = propValue.toUpperCase();
+
+      return textArray.some((word) => upperProp.includes(word));
+    } else {
+      return false;
+    }
+  };
+}
+
+/**
+ * Starts process
  */
 async function init() {
   try {
     Logger.clear();
 
-    const file = await askForInput();
+    const file = await questions.askForInput();
     const filePath = getCleanPath(file);
 
     const spinner = ora('Reading Shapefile').start();
-    const geoJSON = await getGeoJSON(filePath);
-    spinner.succeed('Converted SHP to GeoJSON');
 
-    const propertyToSplitBy = await askForPropertyToSplit(geoJSON.props);
-    const folderToPutFilesInto = await askForFolder();
-    const extensionToUse = await askForExtension();
+    const shapeReader = new ShapefileReader(filePath);
 
-    const filterBool = (await askForFilter()) === 'Yes';
+    const props = await shapeReader.readProps();
+
+    spinner.succeed('Read available features properties');
+
+    const propertyToSplitBy = await questions.askForPropertyToSplit(props);
+    const folderToPutFilesInto = await questions.askForFolder();
+    const extensionToUse = await questions.askForExtension();
+
+    const filterBool = (await questions.askForFilter()) === 'Yes';
+
+    let filterFunc;
 
     if (filterBool) {
-      const propToFilter = await askForPropToFilter(geoJSON.props);
-      const filterType = await askForFilterType();
+      const propToFilter = await questions.askForPropToFilter(props);
+      const filterType = await questions.askForFilterType();
 
       if (filterType === 'From a list') {
-        const valuesSpinner = ora('Getting unique property values').start();
-        const uniqueValues = orderBy(
-          [...new Set(geoJSON.map.features.map((feature) => feature.properties[propToFilter]))],
-          (d) => removeDiacritics(d),
-          'asc',
-        );
-        valuesSpinner.succeed('Read all possible values');
-        const list = await askForChoiceFilter(uniqueValues);
-        geoJSON.map.features = geoJSON.map.features.filter((feature) =>
-          list.includes(feature.properties[propToFilter]));
+        filterFunc = await getListFilterFunc(shapeReader, propToFilter);
       }
 
       if (filterType === 'By text') {
-        const textFilter = await askForTextFilter();
-        geoJSON.map.features = geoJSON.map.features.filter((feature) => {
-          const value = feature.properties[propToFilter];
-          if (value !== null) {
-            const upperProp = value.toUpperCase();
-            const upperCheck = textFilter.text.toUpperCase();
-            return upperProp.includes(upperCheck);
-          }
-        });
+        filterFunc = await getTextFilterFunc(shapeReader, propToFilter);
       }
     }
 
     const start = new Date();
-
-    // Get unique values for split
-    const uniqueValues = [...new Set(geoJSON.map.features.map((d) => d.properties[propertyToSplitBy]))];
-
-    const len = uniqueValues.length;
 
     const resultsPath = folderToPutFilesInto
       ? `${homedir}/Shapefiles/${folderToPutFilesInto}`
       : `${homedir}/Shapefiles`;
 
     createBaseFolder();
-    if (!fs.existsSync(resultsPath)) {
-      fs.mkdirSync(resultsPath);
+    if (!existsSync(resultsPath)) {
+      mkdirSync(resultsPath);
     }
 
-    const progressSpinner = ora(`Splitting file [0/${len}]`).start();
+    tempFolder = await tempy.directory();
 
-    const fileWriter = new FileWriter(
-      resultsPath,
-      extensionToUse,
-      progressSpinner,
-      len,
-    );
+    const geoJSONWriter = new GeoJSONWriter({
+      tempFolder,
+      destinationFolder: resultsPath,
+      extension: extensionToUse,
+    });
 
-    // Split feature to its own file
-    for (let i = 0; i < len; i++) {
-      const element = uniqueValues[i];
-      fileWriter.writeFile(
-        element,
-        i,
-        filterer(
-          geoJSON.map,
-          (d) => d.properties[propertyToSplitBy] === element,
-        ),
-      );
-    }
+    geoJSONWriter.startTempWrite();
 
-    progressSpinner.succeed('Successfully split all files');
+    await shapeReader.readFeatures((feature) => {
+      if (filterFunc) {
+        if (!filterFunc(feature)) {
+          return;
+        }
+      }
 
-    endSummary(start, len, resultsPath);
+      geoJSONWriter.writeFeature(feature.properties[propertyToSplitBy], feature);
+    });
+
+    geoJSONWriter.endTempWrite();
+
+    const files = geoJSONWriter.getTempFiles();
+
+    const promises = files.map((featurePath) => () => geoJSONWriter.writeFeatureCollection(featurePath));
+
+    geoJSONWriter.startFinalWrite();
+
+    await promiseConcurrency(promises, 10);
+
+    const total = await geoJSONWriter.endFinalWrite();
+
+    endSummary(start, total, resultsPath);
   } catch (err) {
     Logger.error('Error processing file', err);
+
+    if (tempFolder) {
+      await deleteFolder(tempFolder);
+    }
+
     process.exit(1);
   }
 }
@@ -183,7 +182,7 @@ function endSummary(start, len, resultsPath) {
   const time = end.getTime() - start.getTime();
 
   Logger.log('\n');
-  Logger.log(`Processed ${len} files in ${time / 1000} s.\nSaved to ${resultsPath}`);
+  Logger.log(`Processed ${len} files in ${msToText(time)}\nSaved to ${resultsPath}`);
 }
 
 // Start script

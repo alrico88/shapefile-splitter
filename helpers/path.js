@@ -9,7 +9,9 @@ const replace = require('lodash/replace');
  */
 function getCleanPath(uglyPath) {
   const normPath = replace(uglyPath, /\\/g, '/');
+
   const normQuotes = replace(normPath, /"/g, '');
+
   return path.normalize(normQuotes.trim());
 }
 

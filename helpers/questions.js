@@ -7,6 +7,7 @@ const Prompt = require('./prompt');
  */
 async function askForInput() {
   const response = await Prompt.createInputPrompt('Path to shapefile to split');
+
   return response.result;
 }
 
@@ -18,6 +19,7 @@ async function askForInput() {
  */
 async function askForPropertyToSplit(props) {
   const response = await Prompt.createListPrompt('Property to split by', props);
+
   return response.result;
 }
 
@@ -31,6 +33,7 @@ async function askForFolder() {
     'Folder to put split files in',
     '',
   );
+
   return response.result;
 }
 
@@ -44,6 +47,7 @@ async function askForExtension() {
     'Choose the file extension to use',
     ['json', 'geojson'],
   );
+
   return response.result;
 }
 
@@ -57,6 +61,7 @@ async function askForFilter() {
     'Do you want to filter the properties to split?',
     ['Yes', 'No'],
   );
+
   return response.result;
 }
 
@@ -70,6 +75,7 @@ async function askForFilterType() {
     'Do you want to filter the properties to split?',
     ['From a list', 'By text'],
   );
+
   return response.result;
 }
 
@@ -84,6 +90,7 @@ async function askForPropToFilter(propTypes) {
     'Which property values would you like to filter?',
     propTypes,
   );
+
   return response.result;
 }
 
@@ -98,6 +105,7 @@ async function askForChoiceFilter(propValues) {
     'Choose which values to split',
     propValues,
   );
+
   return response.result;
 }
 
@@ -107,7 +115,8 @@ async function askForChoiceFilter(propValues) {
  * @returns {Promise<string>}
  */
 async function askForTextFilter() {
-  const response = await Prompt.createInputPrompt('Enter a text filter');
+  const response = await Prompt.createInputPrompt('Enter a text filter (multiple values with ,)');
+
   return response.result;
 }
 
